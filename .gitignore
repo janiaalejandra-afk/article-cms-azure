@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# Flask-Session filesystem store
+flask_session/
+
+# Local secrets - never commit
+.env
+credentials.ps1
+credentials.sh
+
+# Editors / OS
+.vscode/
+.vs/
+*.DS_Store

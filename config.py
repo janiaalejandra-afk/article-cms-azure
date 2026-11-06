@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote_plus
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -13,13 +14,22 @@ class Config(object):
     SQL_DATABASE = os.environ.get('SQL_DATABASE') or 'ENTER_SQL_DB_NAME'
     SQL_USER_NAME = os.environ.get('SQL_USER_NAME') or 'ENTER_SQL_SERVER_USERNAME'
     SQL_PASSWORD = os.environ.get('SQL_PASSWORD') or 'ENTER_SQL_SERVER_PASSWORD'
-    # Below URI may need some adjustments for driver version, based on your OS, if running locally
-    SQLALCHEMY_DATABASE_URI = 'mssql+pyodbc://' + SQL_USER_NAME + '@' + SQL_SERVER + ':' + SQL_PASSWORD + '@' + SQL_SERVER + ':1433/' + SQL_DATABASE  + '?driver=ODBC+Driver+17+for+SQL+Server'
+    # ODBC driver installed on the host (Azure App Service Linux images ship 17 and 18)
+    SQL_DRIVER = os.environ.get('SQL_DRIVER') or 'ODBC Driver 17 for SQL Server'
+    # User and password are URL-encoded so special characters (@, :, /, #...) don't break the URI
+    SQLALCHEMY_DATABASE_URI = (
+        'mssql+pyodbc://' + quote_plus(SQL_USER_NAME) + ':' + quote_plus(SQL_PASSWORD)
+        + '@' + SQL_SERVER + ':1433/' + SQL_DATABASE
+        + '?driver=' + quote_plus(SQL_DRIVER)
+        + '&Encrypt=yes&TrustServerCertificate=no&Connection+Timeout=30'
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Azure SQL closes idle connections; check/recycle pooled connections before use
+    SQLALCHEMY_ENGINE_OPTIONS = {'pool_pre_ping': True, 'pool_recycle': 280}
 
     ### Info for MS Authentication ###
     ### As adapted from: https://github.com/Azure-Samples/ms-identity-python-webapp ###
-    CLIENT_SECRET = "ENTER_CLIENT_SECRET_HERE"
+    CLIENT_SECRET = os.environ.get('CLIENT_SECRET') or 'ENTER_CLIENT_SECRET_HERE'
     # In your production app, Microsoft recommends you to use other ways to store your secret,
     # such as KeyVault, or environment variable as described in Flask's documentation here:
     # https://flask.palletsprojects.com/en/1.1.x/config/#configuring-from-environment-variables
@@ -30,7 +40,7 @@ class Config(object):
     AUTHORITY = "https://login.microsoftonline.com/common"  # For multi-tenant app, else put tenant name
     # AUTHORITY = "https://login.microsoftonline.com/Enter_the_Tenant_Name_Here"
 
-    CLIENT_ID = "ENTER_CLIENT_ID_HERE"
+    CLIENT_ID = os.environ.get('CLIENT_ID') or 'ENTER_CLIENT_ID_HERE'
 
     REDIRECT_PATH = "/getAToken"  # Used to form an absolute URL; must match to app's redirect_uri set in AAD
 
